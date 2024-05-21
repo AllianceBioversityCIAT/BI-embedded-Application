@@ -14,10 +14,10 @@ describe('AppComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  test(`should have the 'bi-embedded' title`, () => {
+  test(`should have the 'BI Embedded Application' title`, () => {
     const fixture = TestBed.createComponent(AppComponent);
     const component = fixture.componentInstance;
-    expect(component.title).toEqual('bi-embedded');
+    expect(component.title).toEqual('BI Embedded Application');
   });
 
   test('should only contain router-outlet', () => {
