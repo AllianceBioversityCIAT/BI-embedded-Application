@@ -44,6 +44,11 @@
     "@angular-eslint/template-parser": "17.4.0",
     "@angular/cli": "^17.3.0",
     "@angular/compiler-cli": "^17.3.0",
+    "@semantic-release/commit-analyzer": "^12.0.0",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^10.0.4",
+    "@semantic-release/npm": "^12.0.1",
+    "@semantic-release/release-notes-generator": "^13.0.0",
     "@types/file-saver": "^2.0.7",
     "@types/jest": "^29.5.12",
     "@typescript-eslint/eslint-plugin": "7.8.0",
@@ -58,6 +63,11 @@
     "preset": "jest-preset-angular",
     "setupFilesAfterEnv": [
       "<rootDir>/src/setup-jest.ts"
+    ],
+    "coverageReporters": [
+      "text",
+      "cobertura",
+      "lcov"
     ],
     "globalSetup": "jest-preset-angular/global-setup",
     "collectCoverage": true,
@@ -82,6 +92,24 @@
         "lines": 50,
         "statements": 50
       }
+    },
+    "release": {
+      "branches": [
+        "main"
+      ],
+      "repositoryUrl": "https://github.com/AllianceBioversityCIAT/BI-embedded-Application.git",
+      "plugins": [
+        "@semantic-release/commit-analyzer",
+        "@semantic-release/release-notes-generator",
+        "@semantic-release/npm",
+        [
+          "@semantic-release/git",
+          {
+            "message": "chore(release): ${nextRelease.version} \n\n${nextRelease.notes}"
+          }
+        ],
+        "@semantic-release/github"
+      ]
     }
   }
 }
