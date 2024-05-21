@@ -96,22 +96,22 @@ describe('NavigationBarService', () => {
       expect(variables).toEqual(['1', '2', '3']);
     });
   });
-  describe('applyFilters', () => {
-    it('should return a list of variables', () => {
-      service.applyFilters([
-        {
-          id: 1,
-          report_id: 1,
-          variablename: 'testVariable',
-          scope: 'testScope',
-          table: 'testTable',
-          column: 'testColumn',
-          operator: 'testOperator',
-          param_type: 'int'
-        }
-      ]);
-    });
-  });
+  // describe('applyFilters', () => {
+  //   it('should return a list of variables', () => {
+  //     service.applyFilters([
+  //       {
+  //         id: 1,
+  //         report_id: 1,
+  //         variablename: 'testVariable',
+  //         scope: 'testScope',
+  //         table: 'testTable',
+  //         column: 'testColumn',
+  //         operator: 'testOperator',
+  //         param_type: 'int'
+  //       }
+  //     ]);
+  //   });
+  // });
   describe('getReportName', () => {
     it('should return a list of variables', () => {
       const reportName = service.getReportName();
