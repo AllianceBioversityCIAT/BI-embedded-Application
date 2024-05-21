@@ -8,5 +8,5 @@ import { RouterOutlet } from '@angular/router';
   templateUrl: './app.component.html'
 })
 export class AppComponent {
-  title = 'Bi Embedded application';
+  title = 'BI Embedded Application';
 }

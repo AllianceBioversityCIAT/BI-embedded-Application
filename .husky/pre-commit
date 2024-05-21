@@ -1,3 +1,4 @@
 cd bi-client
 npm run lint
 npm run s-lint
+npm run test
