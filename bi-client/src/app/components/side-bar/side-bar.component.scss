@@ -1,0 +1,59 @@
+.side-bar-space,
+.side-bar {
+  width: 200px;
+  margin: 5px;
+  box-sizing: border-box;
+  height: calc(100vh - 10px);
+  border-radius: 10px;
+}
+
+.side-bar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  background-color: var(--dark-1);
+  color: white;
+  padding: 10px;
+
+  .title {
+    text-align: center;
+    font-weight: 500;
+    font-size: 1.2em;
+    color: white;
+    padding-top: 20px;
+    padding-bottom: 50px;
+  }
+
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    a {
+      text-decoration: none;
+      color: white;
+      font-size: 1rem;
+      padding: 8px;
+      padding-left: 40px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-radius: 5px;
+
+      i {
+        font-size: 1.3rem;
+        color: white;
+      }
+
+      &.active {
+        background-color: #2f344d;
+        color: white;
+      }
+
+      &:hover {
+        background-color: #282c3e;
+        color: white;
+      }
+    }
+  }
+}

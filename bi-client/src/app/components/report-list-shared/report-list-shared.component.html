@@ -1,14 +1,10 @@
 <div class="reports">
-  <a
-    [routerLink]="'/bi/' + data.report.report_name"
-    *ngFor="let data of this.reportsInformation; let i = index">
+  @for (data of this.reportsInformation; track $index) {
+  <a [routerLink]="'/bi/' + data.report.report_name">
     <div class="report-title">{{ data.report.report_title }}</div>
     <div class="report-description" [innerHTML]="data.report.report_description"></div>
     <div class="report-description"><strong>Name</strong> {{ data.report.report_name }}</div>
     <div class="report-filters"></div>
   </a>
-</div>
-
-<div class="version">
-  {{ constants.version }}
+  }
 </div>
