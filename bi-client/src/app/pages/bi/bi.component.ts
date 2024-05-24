@@ -173,7 +173,6 @@ export default class BiComponent implements OnInit {
       );
 
       const { report } = reportData;
-      console.log(reportData);
       this.showFullScreen = Boolean(report.has_full_screen);
       this.validateBAckResponseProcess(reportData);
 

@@ -1,10 +1,95 @@
 <div class="reports">
-  @for (data of this.reportsInformation; track $index) {
-  <a [routerLink]="'/bi/' + data.report.report_name">
+  <button class="action-button" (click)="toggleExpand()">
+    {{ this.expanded ? 'Collapse' : 'Expand' }}
+  </button>
+
+  @for (data of this.reportControlListSE.reportList; track $index) {
+  <div class="report-item" (click)="expandItem(data)">
     <div class="report-title">{{ data.report.report_title }}</div>
+    <div class="data">
+      <div class="report-description">
+        {{ data.report.report_name }}
+      </div>
+      <div class="tag">Filters: {{ data.filters.length }}</div>
+      <a [routerLink]="'/bi/' + data.report.report_name" class="tag">Open</a>
+      <i class="expand material-icons-round {{ data.expanded && 'rotate' }}">chevron_right</i>
+    </div>
+  </div>
+  <div
+    class="content {{ data.expanded && 'content-padding' }}"
+    [@expandable]="data.expanded ? 'expand' : 'collapse'">
     <div class="report-description" [innerHTML]="data.report.report_description"></div>
-    <div class="report-description"><strong>Name</strong> {{ data.report.report_name }}</div>
-    <div class="report-filters"></div>
-  </a>
+
+    <div class="data-title">Report</div>
+    <div class="report-data">
+      <div class="tag">
+        dataset_id: <span>{{ data.report.dataset_id }}</span>
+      </div>
+
+      <div class="tag">
+        group_id: <span>{{ data.report.group_id }}</span>
+      </div>
+
+      <div class="tag">
+        has_full_screen: <span>{{ data.report.has_full_screen }}</span>
+      </div>
+
+      <div class="tag">
+        has_rls_security: <span>{{ data.report.has_rls_security }}</span>
+      </div>
+
+      <div class="tag">
+        id: <span>{{ data.report.id }}</span>
+      </div>
+
+      <div class="tag">
+        is_active: <span>{{ data.report.is_active }}</span>
+      </div>
+
+      <div class="tag">
+        report_description: <span>{{ data.report.report_description }}</span>
+      </div>
+
+      <div class="tag">
+        report_id: <span>{{ data.report.report_id }}</span>
+      </div>
+
+      <div class="tag">
+        report_name: <span>{{ data.report.report_name }}</span>
+      </div>
+
+      <div class="tag">
+        report_order: <span>{{ data.report.report_order }}</span>
+      </div>
+
+      <div class="tag">
+        report_title: <span>{{ data.report.report_title }}</span>
+      </div>
+    </div>
+
+    @if (data.filters.length) {
+    <div class="data-title" style="padding-top: 30px">Filters</div>
+    <div class="filter-list">
+      <strong>Id</strong>
+      <strong>Column</strong>
+      <strong>Operator</strong>
+      <strong>Param_type</strong>
+      <strong>Report_id</strong>
+      <strong>Scope</strong>
+      <strong>Table</strong>
+      <strong>Variablename</strong>
+      @for (filter of data.filters; track $index) {
+      <div class="filter-text">{{ filter.id }}</div>
+      <div class="filter-text">{{ filter.column }}</div>
+      <div class="filter-text">{{ filter.operator }}</div>
+      <div class="filter-text">{{ filter.param_type }}</div>
+      <div class="filter-text">{{ filter.report_id }}</div>
+      <div class="filter-text">{{ filter.scope }}</div>
+      <div class="filter-text">{{ filter.table }}</div>
+      <div class="filter-text">{{ filter.variablename }}</div>
+      }
+    </div>
+    }
+  </div>
   }
 </div>

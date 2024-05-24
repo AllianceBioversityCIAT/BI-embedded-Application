@@ -1,6 +1,7 @@
 export interface GetBiReports {
   report: Report;
   filters: BiFilter[];
+  expanded: boolean;
 }
 
 export interface Resp<T> {

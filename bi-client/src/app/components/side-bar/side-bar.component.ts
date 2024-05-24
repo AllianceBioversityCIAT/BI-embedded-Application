@@ -20,6 +20,11 @@ export class SideBarComponent {
       name: 'List',
       link: '/list',
       icon: 'list'
+    },
+    {
+      name: 'Widget',
+      link: '/list',
+      icon: 'code'
     }
   ];
 }
