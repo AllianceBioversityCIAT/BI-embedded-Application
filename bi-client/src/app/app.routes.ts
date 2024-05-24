@@ -15,6 +15,10 @@ export const routes: Routes = [
   },
   {
     path: '',
+    loadComponent: () => import('./pages/not-found/not-found.component')
+  },
+  {
+    path: 'website',
     loadComponent: () => import('./pages/website/website.component'),
     children: [
       {
@@ -29,7 +33,7 @@ export const routes: Routes = [
   },
   {
     path: '**',
-    redirectTo: '',
+    redirectTo: 'not-found',
     pathMatch: 'full'
   }
 ];
