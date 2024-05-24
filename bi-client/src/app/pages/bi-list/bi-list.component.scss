@@ -38,3 +38,14 @@
     }
   }
 }
+
+.version {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  font-size: 0.7em;
+  color: rgb(127 61 233);
+  text-align: right;
+  padding: 10px;
+  border-radius: 0 0 4px 4px;
+}
