@@ -6,14 +6,24 @@
   height: 100vh;
   font-size: 2rem;
   padding: 0 200px;
+  background-color: rgb(49 49 49 / 30.8%);
+  backdrop-filter: blur(10px);
+  position: relative;
+  text-shadow: 2px 2px 2px rgb(0 0 0 / 50%);
 
   .title {
-    font-size: 4rem;
-    color: var(--primary-1);
+    font-size: 3rem;
+    color: white;
     font-weight: bold;
   }
+}
 
-  .desc {
-    font-size: 1.3rem;
-  }
+video {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  z-index: -1;
 }
