@@ -6,10 +6,10 @@
   height: 100vh;
   font-size: 2rem;
   padding: 0 200px;
-  background-color: rgb(49 49 49 / 30.8%);
+  background-color: rgb(49 49 49 / 69.8%);
   backdrop-filter: blur(10px);
   position: relative;
-  text-shadow: 2px 2px 2px rgb(0 0 0 / 50%);
+  text-shadow: 2px 2px 8px rgb(0 0 0 / 50%);
 
   .title {
     font-size: 3rem;
@@ -18,7 +18,7 @@
   }
 }
 
-video {
+img {
   position: fixed;
   top: 0;
   left: 0;
