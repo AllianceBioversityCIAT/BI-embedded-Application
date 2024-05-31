@@ -39,6 +39,17 @@
 
 <h1 *ngIf="!this.reportName">No reportName</h1>
 
+@if (this.showMonitorPanel && this.biImplementationSE.currentAllSubPages.length) {
+<div class="information-panel">
+  @for (subpage of this.biImplementationSE.currentAllSubPages; track $index) {
+  <div class="subpage">
+    <strong>{{ subpage.displayName }}</strong> - {{ subpage.name }}
+  </div>
+  }
+</div>
+
+}
+
 <div class="monitor-panel" *ngIf="this.showMonitorPanel">
   <div class="help">
     <i class="help-icon material-icons-round"> help </i>
@@ -59,7 +70,7 @@
   </div>
 
   <div
-    class="process {{ process?.works !== null  && 'step-' + process?.step }}"
+    class="process {{ process?.works !== null && 'step-' + process?.step }}"
     [attr.works]="process?.works"
     *ngFor="let process of this.variablesSE.processes">
     <i

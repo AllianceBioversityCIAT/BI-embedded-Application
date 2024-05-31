@@ -30,6 +30,7 @@ export class BiImplementationService {
   showExportSpinner = false;
   currentReportName = '';
   showGlobalLoader = true;
+  currentAllSubPages: pbi.Page[] = [];
 
   getBiReports() {
     return this.http.get<Resp<GetBiReports>>(`${this.apiBaseUrl}/bi-reports`).pipe(
@@ -97,6 +98,9 @@ export class BiImplementationService {
         this.applyFilters(filters);
         this.variablesSE.processes[3].works = true;
         this.showGlobalLoader = false;
+        this.report.getPages().then((pages: pbi.Page[]) => {
+          this.currentAllSubPages = pages;
+        });
       });
 
       this.report.on(
