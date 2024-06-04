@@ -37,7 +37,8 @@ export class BiImplementationService {
       map(resp =>
         resp.response.map(item => ({
           ...item,
-          filters: item.filters.filter(filter => filter != null)
+          filters: item.filters.filter(filter => filter != null),
+          subpages: item.subpages.filter(subpage => subpage != null)
         }))
       )
     );
@@ -161,12 +162,6 @@ export class BiImplementationService {
             values: this.convertVariableToList(variables, filter?.param_type),
             filterType: pbi.models.FilterType.Basic
           };
-          this.report
-            .updateFilters(pbi.models.FiltersOperations.Replace, [filterConfig])
-            .catch(err => {
-              console.error(err);
-            });
-
           await page.updateFilters(pbi.models.FiltersOperations.Replace, [filterConfig]);
         } catch (errors) {
           console.error(errors);

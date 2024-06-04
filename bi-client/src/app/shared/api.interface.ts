@@ -1,6 +1,7 @@
 export interface GetBiReports {
   report: Report;
   filters: BiFilter[];
+  subpages: BiSubpage[];
   expanded: boolean;
 }
 
@@ -40,4 +41,12 @@ export interface BiFilter {
   operator: string;
   param_type: string;
   report_id: number;
+}
+
+interface BiSubpage {
+  id: number;
+  page_name: string;
+  report_id: number;
+  section_number: string;
+  page_displayName: string;
 }
