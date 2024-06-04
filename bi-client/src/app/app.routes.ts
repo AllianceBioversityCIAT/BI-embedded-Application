@@ -23,6 +23,11 @@ export const routes: Routes = [
     children: [
       {
         path: '',
+        redirectTo: 'home',
+        pathMatch: 'full'
+      },
+      {
+        path: 'home',
         loadComponent: () => import('./pages/website/pages/home/home.component')
       },
       {

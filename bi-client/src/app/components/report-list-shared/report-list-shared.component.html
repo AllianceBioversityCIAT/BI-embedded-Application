@@ -89,6 +89,19 @@
       <div class="filter-text">{{ filter.variablename }}</div>
       }
     </div>
+    } @if (data.subpages.length) {
+    <div class="data-title" style="padding-top: 30px">Subpages</div>
+    <div class="subpages-list">
+      <strong>page_name</strong>
+      <strong>page_displayName</strong>
+      <strong>section_number</strong>
+      @for (filter of data.subpages; track $index) {
+      <div class="filter-text">{{ filter.page_name }}</div>
+      <div class="filter-text">{{ filter.page_displayName }}</div>
+      <div class="filter-text">{{ filter.section_number }}</div>
+
+      }
+    </div>
     }
   </div>
   }

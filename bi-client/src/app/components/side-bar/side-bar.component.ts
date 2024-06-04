@@ -13,18 +13,18 @@ export class SideBarComponent {
   options = [
     {
       name: 'Home',
-      link: '/',
+      link: '/website/home',
       icon: 'home'
     },
     {
       name: 'List',
-      link: '/list',
+      link: '/website/list',
       icon: 'list'
-    },
-    {
-      name: 'Widget',
-      link: '/list',
-      icon: 'code'
     }
+    // {
+    //   name: 'Widget',
+    //   link: '/website/list',
+    //   icon: 'code'
+    // }
   ];
 }

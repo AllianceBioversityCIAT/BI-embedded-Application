@@ -30,13 +30,15 @@ export class BiImplementationService {
   showExportSpinner = false;
   currentReportName = '';
   showGlobalLoader = true;
+  currentAllSubPages: pbi.Page[] = [];
 
   getBiReports() {
     return this.http.get<Resp<GetBiReports>>(`${this.apiBaseUrl}/bi-reports`).pipe(
       map(resp =>
         resp.response.map(item => ({
           ...item,
-          filters: item.filters.filter(filter => filter != null)
+          filters: item.filters.filter(filter => filter != null),
+          subpages: item.subpages.filter(subpage => subpage != null)
         }))
       )
     );
@@ -97,6 +99,9 @@ export class BiImplementationService {
         this.applyFilters(filters);
         this.variablesSE.processes[3].works = true;
         this.showGlobalLoader = false;
+        this.report.getPages().then((pages: pbi.Page[]) => {
+          this.currentAllSubPages = pages;
+        });
       });
 
       this.report.on(
@@ -157,12 +162,6 @@ export class BiImplementationService {
             values: this.convertVariableToList(variables, filter?.param_type),
             filterType: pbi.models.FilterType.Basic
           };
-          this.report
-            .updateFilters(pbi.models.FiltersOperations.Replace, [filterConfig])
-            .catch(err => {
-              console.error(err);
-            });
-
           await page.updateFilters(pbi.models.FiltersOperations.Replace, [filterConfig]);
         } catch (errors) {
           console.error(errors);

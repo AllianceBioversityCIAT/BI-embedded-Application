@@ -110,6 +110,12 @@
       padding-bottom: 10px;
     }
 
+    .subpages-list {
+      display: grid;
+      grid-template-columns: repeat(3, auto);
+      gap: 10px 0;
+    }
+
     .filter-list {
       display: grid;
       grid-template-columns: repeat(8, auto);
