@@ -126,6 +126,7 @@ describe('NavigationBarService', () => {
   //     expect(reportName).toBeTruthy();
   //   });
   // });
+
   describe('getBookmarkName', () => {
     it('should return a list of variables', () => {
       const bookmarkName = service.getBookmarkName(_mockReport, 1);
