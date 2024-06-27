@@ -139,13 +139,7 @@ describe('BiComponent', () => {
       expect(component.isFullScreen).toBe(true);
     });
   });
-  describe('gATracking', () => {
-    test('should call gATracking', () => {
-      const gATrackingSpy = jest.spyOn(component, 'gATracking');
-      component.gATracking('testReportName');
-      expect(gATrackingSpy).toHaveBeenCalled();
-    });
-  });
+
   describe('reportDescriptionInnerHtml', () => {
     test('should call reportDescriptionInnerHtml', () => {
       const reportDescriptionInnerHtmlSpy = jest.spyOn(component, 'reportDescriptionInnerHtml');

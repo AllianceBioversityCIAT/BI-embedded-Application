@@ -9,6 +9,7 @@ import { VariablesService } from './variables.service';
 import { ActivatedRoute } from '@angular/router';
 import { BiFilter } from '../shared/bi.interface';
 import { GetBiReport, GetBiReports, Resp } from '../shared/api.interface';
+import { Title } from '@angular/platform-browser';
 
 interface QueryParamsEvents {
   filterPaneEnabled: string;
@@ -24,6 +25,7 @@ export class BiImplementationService {
   exportTablesSE = inject(ExportTablesService);
   variablesSE = inject(VariablesService);
   activatedRoute = inject(ActivatedRoute);
+  titleService = inject(Title);
 
   apiBaseUrl = environment.apiBaseUrl + 'result-dashboard-bi';
   report: pbi.Report = {} as pbi.Report;
@@ -99,15 +101,18 @@ export class BiImplementationService {
         this.applyFilters(filters);
         this.variablesSE.processes[3].works = true;
         this.showGlobalLoader = false;
-        this.report.getPages().then((pages: pbi.Page[]) => {
+        this.report.getPages()?.then((pages: pbi.Page[]) => {
           this.currentAllSubPages = pages;
         });
+        resolve();
       });
 
       this.report.on(
         'pageChanged',
-        (event: pbi.service.ICustomEvent<{ newPage: { displayName: string } }>) => {
+        async (event: pbi.service.ICustomEvent<{ newPage: { displayName: string } }>) => {
           const page = event.detail.newPage;
+          const reportPageName = await this.getReportName();
+          this.gATracking(reportPageName);
           IBDGoogleAnalytics().trackPageView(this.convertNameToTitle(page.displayName));
         }
       );
@@ -119,6 +124,11 @@ export class BiImplementationService {
       });
       this.exportButton(this.report);
     });
+  }
+
+  gATracking(reportPageName: string) {
+    this.titleService.setTitle(this.convertNameToTitle(reportPageName));
+    IBDGoogleAnalytics().initialize(environment.googleAnalyticsId);
   }
 
   convertVariableToList(variables: string, param_type: string) {
@@ -147,7 +157,7 @@ export class BiImplementationService {
           });
       } else {
         try {
-          const pages = await this.report.getPages();
+          const pages = await this.report?.getPages();
           const page = pages.filter(function (page) {
             return page.isActive;
           })[0];
@@ -175,10 +185,10 @@ export class BiImplementationService {
     return ttile.replace(/-/g, ' ')?.charAt(0)?.toUpperCase() + ttile?.slice(1);
   };
 
-  getReportName(): Promise<string> {
+  async getReportName(): Promise<string> {
     return new Promise<string>((resolve, reject) => {
       this.report
-        .getPages()
+        ?.getPages()
         .then((pages: pbi.Page[]) => {
           const activePage = pages.find(page => page.isActive);
 
