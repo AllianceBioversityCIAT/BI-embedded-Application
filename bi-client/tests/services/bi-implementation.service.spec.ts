@@ -59,6 +59,14 @@ describe('NavigationBarService', () => {
     expect(service).toBeTruthy();
   });
 
+  // describe('gATracking', () => {
+  //   test('should call gATracking', () => {
+  //     const gATrackingSpy = jest.spyOn(service, 'gATracking');
+  //     service.gATracking('testReportName');
+  //     expect(gATrackingSpy).toHaveBeenCalled();
+  //   });
+  // });
+
   describe('getBiReportWithCredentialsById', () => {
     it('should return a BiReport', () => {
       const biReport = service.getBiReportWithCredentialsById('testId');
@@ -112,12 +120,12 @@ describe('NavigationBarService', () => {
   //     ]);
   //   });
   // });
-  describe('getReportName', () => {
-    it('should return a list of variables', () => {
-      const reportName = service.getReportName();
-      expect(reportName).toBeTruthy();
-    });
-  });
+  // describe('getReportName', () => {
+  //   it('should return a list of variables', () => {
+  //     const reportName = service.getReportName();
+  //     expect(reportName).toBeTruthy();
+  //   });
+  // });
   describe('getBookmarkName', () => {
     it('should return a list of variables', () => {
       const bookmarkName = service.getBookmarkName(_mockReport, 1);

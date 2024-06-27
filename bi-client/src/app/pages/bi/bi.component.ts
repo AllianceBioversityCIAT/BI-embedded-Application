@@ -1,9 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { BiImplementationService } from '../../services/bi-implementation.service';
-import { Title } from '@angular/platform-browser';
-import { IBDGoogleAnalytics } from 'ibdevkit';
-import { environment } from '../../../environments/environment';
 import { firstValueFrom } from 'rxjs';
 import { VariablesService } from '../../services/variables.service';
 import { CommonModule } from '@angular/common';
@@ -21,7 +18,6 @@ import { GetBiReport } from '../../shared/api.interface';
 export default class BiComponent implements OnInit {
   biImplementationSE = inject(BiImplementationService);
   activatedRoute = inject(ActivatedRoute);
-  titleService = inject(Title);
   tabVisibilityService = inject(TabVisibilityService);
   variablesSE = inject(VariablesService);
   reportName = '';
@@ -184,9 +180,7 @@ export default class BiComponent implements OnInit {
         this.reportName,
         report?.mainPage == 'Record not found' ? '' : report?.mainPage
       );
-      const reportPageName = await this.biImplementationSE.getReportName();
       this.biImplementationSE.currentReportName = report?.report_name;
-      this.gATracking(reportPageName);
     } catch (error) {
       console.error(error);
       this.reportDescriptionInnerHtml();
@@ -194,13 +188,8 @@ export default class BiComponent implements OnInit {
     }
   }
 
-  gATracking(reportPageName: string) {
-    this.titleService.setTitle(this.biImplementationSE.convertNameToTitle(reportPageName));
-    IBDGoogleAnalytics().initialize(environment.googleAnalyticsId);
-  }
-
   reportDescriptionInnerHtml() {
-    const element: HTMLElement | null = document.getElementById('reportDescription');
+    const element: HTMLElement | null = document?.getElementById('reportDescription');
     if (element) element.innerHTML = this.reportDescription;
   }
 }
