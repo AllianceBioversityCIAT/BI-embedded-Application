@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import biE2E from '../controllers/biFrontController';
+import { biE2E } from '../controllers/biFrontController';
 
 const router = Router();
 
