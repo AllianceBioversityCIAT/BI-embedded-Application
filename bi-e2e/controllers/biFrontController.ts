@@ -2,34 +2,50 @@ import { Request, Response } from 'express';
 import puppeteer from 'puppeteer';
 
 const evaluateUrl = async (url: string) => {
-  const browser = await puppeteer.launch({ headless: true });
-  const page = await browser.newPage();
-  await page.goto(url);
+  return new Promise(async (resolve, reject) => {
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
 
-  await page.waitForSelector('.step-4');
+    await page.goto(url);
 
-  const works = await page.evaluate(() => {
-    const element = document.querySelector('.step-4');
-    return element ? element.getAttribute('works') : null;
+    let works = null;
+    try {
+      await page.waitForSelector('.step-4').catch(error => {
+        console.log('Error in the web scraping process.', error);
+        reject({ error });
+      });
+
+      works = await page
+        .evaluate(() => {
+          const element = document.querySelector('.step-4');
+          return element ? element.getAttribute('works') : null;
+        })
+        .catch(error => {
+          console.log('Error in the web scraping process.', error);
+          reject({ error });
+        });
+    } catch (error) {
+      reject({ error });
+    }
+
+    await browser.close();
+
+    let message;
+    const isWorkNotNull = works != null;
+    const isWorkTrue = works === 'true';
+
+    if (isWorkNotNull) {
+      message = isWorkTrue ? 'Embedding generated successfully.' : "Embedding wasn't generated.";
+    } else {
+      message = 'Error in the web scraping process.';
+      reject({ message });
+    }
+    resolve({
+      works,
+      message,
+      url
+    });
   });
-
-  await browser.close();
-
-  let message;
-  const isWorkNotNull = works != null;
-  const isWorkTrue = works === 'true';
-
-  if (isWorkNotNull) {
-    message = isWorkTrue ? 'Embedding generated successfully.' : "Embedding wasn't generated.";
-  } else {
-    message = 'Error in the web scraping process.';
-  }
-
-  return {
-    works,
-    message,
-    url
-  };
 };
 
 const biE2E = async (req: Request, res: Response) => {
@@ -49,5 +65,11 @@ const biE2E = async (req: Request, res: Response) => {
     res.status(400).json({ error });
   }
 };
+
+const clarisaAuth = async () => {
+  console.log('Clarisa auth');
+};
+
+clarisaAuth();
 
 export { biE2E, evaluateUrl };

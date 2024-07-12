@@ -23,13 +23,46 @@ app.get('/example', (req, res) => {
 
 app.use('/', router);
 
-const executeBiFrontEndpoint = async () => {
-  // await biE2E();
-  const response = await evaluateUrl(
-    'https://bitest.ciat.cgiar.org/bi/cgiar-results-dashboard/monitor'
-  );
-  console.log(response);
-  console.log('job');
-};
+const websites = [
+  {
+    link: 'https://bitest.ciat.cgiar.org/bi/cgiar-results-dashboard/monitor',
+    spec: '*/5 * * * * *',
+    cssClass: 'zero'
+  },
+  {
+    link: 'https://bitest.ciat.cgiar.org/bi/cgiar-results-dashboard/monitor',
+    spec: '*/10 * * * * *',
+    cssClass: 'one'
+  },
+  {
+    link: 'https://bitest.ciat.cgiar.org/bi/cgiar-results-dashboard/monitor',
+    spec: '*/20 * * * * *',
+    cssClass: 'one'
+  },
+  {
+    link: 'https://bitest.ciat.cgiar.org/bi/cgiar-results-dashboard/monitor',
+    spec: '*/30 * * * * *',
+    cssClass: 'three'
+  },
+  {
+    link: 'https://bitest.ciat.cgiar.org/bi/cgiar-results-dashboard/monitor',
+    spec: '*/60 * * * * *',
+    cssClass: 'four'
+  }
+];
+console.log('foreach');
 
-schedule.scheduleJob('*/10 * * * *', executeBiFrontEndpoint);
+for (let index = 0; index < websites.length; index++) {
+  console.log('start');
+  const { link, spec, cssClass } = websites[index];
+  schedule.scheduleJob(spec, async () => {
+    try {
+      const response = await evaluateUrl(link);
+      console.log('init => ' + spec + ' => ' + cssClass);
+      console.log(response);
+    } catch (error) {
+      console.error('Error al evaluar la URL:', link, error);
+      // Aquí puedes decidir cómo manejar el error, por ejemplo, reintentar, registrar el error, etc.
+    }
+  });
+}
