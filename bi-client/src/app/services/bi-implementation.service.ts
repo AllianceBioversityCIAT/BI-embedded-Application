@@ -24,6 +24,9 @@ export class BiImplementationService {
   showExportSpinner = false;
   currentReportName = '';
   showGlobalLoader = true;
+  currentAllSubPages: pbi.Page[] = [];
+  currentHeight: string | number = 1000;
+  autoSizeMode = false;
 
   getBiReports() {
     return this.http.get<Resp<GetBiReports>>(`${this.apiBaseUrl}/bi-reports`).pipe(
@@ -84,6 +87,14 @@ export class BiImplementationService {
         this.applyFilters(filters);
         this.variablesSE.processes[3].works = true;
         this.showGlobalLoader = false;
+        this.report.getPages()?.then((pages: pbi.Page[]) => {
+          this.currentAllSubPages = pages;
+        });
+        this.autoSizeMode =
+          (this.activatedRoute.snapshot?.queryParams['autoSize'] ?? '') === 'true';
+
+        this.sendCurrentHeight();
+        resolve();
       });
 
       this.report.on(
@@ -91,6 +102,7 @@ export class BiImplementationService {
         (event: pbi.service.ICustomEvent<{ newPage: { displayName: string } }>) => {
           const page = event.detail.newPage;
           IBDGoogleAnalytics().trackPageView(this.convertNameToTitle(page.displayName));
+          this.sendCurrentHeight();
         }
       );
 
@@ -101,6 +113,49 @@ export class BiImplementationService {
       });
       this.exportButton(this.report);
     });
+  }
+
+  getPages(callback: any) {
+    this.report.getPages()?.then((pages: pbi.Page[]) => {
+      const windowWidth = window.innerWidth;
+
+      const calculateEquivalentHeight = (
+        originalWidth: number,
+        originalHeight: number,
+        newWidth: number
+      ) => {
+        const aspectRatio = originalWidth / originalHeight;
+        const newHeight = newWidth / aspectRatio;
+        return newHeight;
+      };
+
+      pages.forEach((element: any) => {
+        if (element.isActive) {
+          this.currentHeight = calculateEquivalentHeight(
+            element.defaultSize.width,
+            element.defaultSize.height,
+            windowWidth
+          );
+        }
+      });
+      callback();
+    });
+  }
+
+  sendCurrentHeight() {
+    if ((this.activatedRoute.snapshot?.queryParams['autoSize'] ?? '') !== 'true') return;
+    this.getPages(() => {
+      const message = {
+        type: 'pagechange',
+        currentHeight: this.currentHeight
+      };
+      window.parent.postMessage(message, '*');
+    });
+  }
+
+  gATracking(reportPageName: string) {
+    this.titleService.setTitle(this.convertNameToTitle(reportPageName));
+    IBDGoogleAnalytics().initialize(environment.googleAnalyticsId);
   }
 
   convertVariableToList(variables: string, param_type: string) {
