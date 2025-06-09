@@ -75,6 +75,28 @@
   margin-top: 0.5rem;
 }
 
+.information-panel {
+  position: fixed;
+  left: 10px;
+  bottom: 10px;
+  background-color: #ffffffe3;
+  padding: 20px;
+  display: flex;
+  gap: 10px;
+  flex-direction: column;
+  box-shadow: 0 0 10px 0 #00000063;
+  border-radius: 5px;
+  padding-right: 70px;
+
+  .subpage {
+    font-size: 12px;
+
+    strong {
+      color: var(--primary-1);
+    }
+  }
+}
+
 .monitor-panel {
   position: fixed;
   right: 10px;

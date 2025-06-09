@@ -31,7 +31,8 @@
               "src/widget"
             ],
             "styles": [
-              "src/styles.scss"
+              "src/styles.scss",
+              "src/app/styles/colors.scss"
             ],
             "scripts": []
           },

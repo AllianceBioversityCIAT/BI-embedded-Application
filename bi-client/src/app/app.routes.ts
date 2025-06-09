@@ -14,8 +14,31 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/bi-list/bi-list.component')
   },
   {
+    path: '',
+    loadComponent: () => import('./pages/not-found/not-found.component')
+  },
+  {
+    path: 'website',
+    loadComponent: () => import('./pages/website/website.component'),
+    children: [
+      {
+        path: '',
+        redirectTo: 'home',
+        pathMatch: 'full'
+      },
+      {
+        path: 'home',
+        loadComponent: () => import('./pages/website/pages/home/home.component')
+      },
+      {
+        path: 'list',
+        loadComponent: () => import('./pages/website/pages/report-list/report-list.component')
+      }
+    ]
+  },
+  {
     path: '**',
-    redirectTo: 'bi-list',
+    redirectTo: 'not-found',
     pathMatch: 'full'
   }
 ];

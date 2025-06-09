@@ -48,8 +48,6 @@ export class ExportTablesService {
               type: 'array'
             });
 
-            console.log(excelBuffer);
-
             this.saveAsExcelFile(excelBuffer, fileName);
             resolve();
           },

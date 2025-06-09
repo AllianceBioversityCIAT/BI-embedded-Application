@@ -1,0 +1,76 @@
+.local-container {
+  padding: 20px;
+
+  .hello,
+  .title,
+  .description {
+    color: var(--dark-3);
+  }
+
+  .hello {
+    font-size: 2em;
+    font-weight: 700;
+  }
+
+  .title {
+    font-size: 1.5em;
+    font-weight: 300;
+
+    strong {
+      color: var(--primary-1);
+    }
+  }
+
+  .description {
+    font-size: 12px;
+  }
+
+  .segment-title {
+    font-size: 1em;
+    color: gray;
+    padding-bottom: 20px;
+  }
+
+  .counter {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--primary-1);
+    width: 150px;
+    height: 150px;
+    border-radius: 8px;
+    padding: 12px;
+    box-sizing: border-box;
+    box-shadow: 0 0 10px var(--primary-1);
+    justify-content: space-between;
+
+    .icon-bg {
+      width: 50px;
+      height: 50px;
+      background-color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10%;
+      box-shadow: 0 0 5px 5px rgb(0 0 0 / 3.7%);
+
+      i {
+        color: var(--primary-1);
+        font-size: 2em;
+      }
+    }
+
+    .texts {
+      .number {
+        color: white;
+        font-weight: 700;
+        font-size: 1.5em;
+      }
+
+      .name {
+        color: white;
+        font-weight: 300;
+        font-size: 1em;
+      }
+    }
+  }
+}

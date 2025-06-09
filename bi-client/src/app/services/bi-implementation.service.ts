@@ -10,6 +10,12 @@ import { ActivatedRoute } from '@angular/router';
 import { BiFilter } from '../shared/bi.interface';
 import { GetBiReport, GetBiReports, Resp } from '../shared/api.interface';
 
+interface QueryParamsEvents {
+  filterPaneEnabled: string;
+  official_code: string;
+  sectionNumber: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -30,9 +36,13 @@ export class BiImplementationService {
 
   getBiReports() {
     return this.http.get<Resp<GetBiReports>>(`${this.apiBaseUrl}/bi-reports`).pipe(
-      map(resp => {
-        return resp?.response;
-      })
+      map(resp =>
+        resp.response.map(item => ({
+          ...item,
+          filters: item.filters.filter(filter => filter != null),
+          subpages: item.subpages.filter(subpage => subpage != null)
+        }))
+      )
     );
   }
 
@@ -47,6 +57,10 @@ export class BiImplementationService {
     return this.http.post<GetBiReport>(`${this.apiBaseUrl}/bi-reports/reportName`, body);
   }
 
+  get routeParams(): QueryParamsEvents {
+    return this.activatedRoute.snapshot.queryParams as QueryParamsEvents;
+  }
+  // https://bi.prms.cgiar.org/bi/type-1-report-dashboard?official_code=INIT-01&sectionNumber=4&filterPaneEnabled=true
   renderReport(
     { token, report, filters }: GetBiReport,
     reportName: string,
@@ -63,7 +77,7 @@ export class BiImplementationService {
         id: embedReportId,
         permissions: pbi.models.Permissions.All,
         settings: {
-          filterPaneEnabled: false,
+          filterPaneEnabled: Boolean(this.routeParams.filterPaneEnabled),
           navContentPaneEnabled: false
         },
         fullscreen: {
@@ -163,22 +177,47 @@ export class BiImplementationService {
     return param_type === 'int' ? varsList?.map((v: string) => parseInt(v)) : varsList;
   }
 
-  applyFilters(filters: BiFilter[]) {
-    filters.forEach((filter: BiFilter) => {
-      const variables = this.activatedRoute.snapshot?.queryParams[filter?.variablename];
-      const filterConfig: pbi.models.IBasicFilter = {
-        $schema: 'https://powerbi.com/product/schema#basic',
-        target: {
-          table: filter?.table,
-          column: filter?.column
-        },
-        operator: filter?.operator as pbi.models.BasicFilterOperators,
-        values: this.convertVariableToList(variables, filter?.param_type),
-        filterType: pbi.models.FilterType.Basic
-      };
-      this.report.updateFilters(pbi.models.FiltersOperations.Replace, [filterConfig]).catch(err => {
-        console.error(err);
-      });
+  async applyFilters(filters: BiFilter[]) {
+    filters.forEach(async (filter: BiFilter) => {
+      if (filter.scope === 'report') {
+        const variables = this.activatedRoute.snapshot?.queryParams[filter?.variablename];
+        const filterConfig: pbi.models.IBasicFilter = {
+          $schema: 'https://powerbi.com/product/schema#basic',
+          target: {
+            table: filter?.table,
+            column: filter?.column
+          },
+          operator: filter?.operator as pbi.models.BasicFilterOperators,
+          values: this.convertVariableToList(variables, filter?.param_type),
+          filterType: pbi.models.FilterType.Basic
+        };
+        this.report
+          .updateFilters(pbi.models.FiltersOperations.Replace, [filterConfig])
+          .catch(err => {
+            console.error(err);
+          });
+      } else {
+        try {
+          const pages = await this.report.getPages();
+          const page = pages.filter(function (page) {
+            return page.isActive;
+          })[0];
+          const variables = this.activatedRoute.snapshot?.queryParams[filter?.variablename];
+          const filterConfig: pbi.models.IBasicFilter = {
+            $schema: 'https://powerbi.com/product/schema#basic',
+            target: {
+              table: filter?.table,
+              column: filter?.column
+            },
+            operator: filter?.operator as pbi.models.BasicFilterOperators,
+            values: this.convertVariableToList(variables, filter?.param_type),
+            filterType: pbi.models.FilterType.Basic
+          };
+          await page.updateFilters(pbi.models.FiltersOperations.Replace, [filterConfig]);
+        } catch (errors) {
+          console.error(errors);
+        }
+      }
     });
   }
 
@@ -229,7 +268,6 @@ export class BiImplementationService {
 
   async detectButtonAndTable(report: pbi.Report, bookmarkName: string | undefined) {
     if (!bookmarkName || bookmarkName.search('export_data') < 0) return 0;
-    console.log('Exporting data...\n');
     this.showExportSpinner = true;
     try {
       const pages = await report.getPages();
