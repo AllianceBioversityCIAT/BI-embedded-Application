@@ -30,12 +30,13 @@
 </div>
 
 <div class="reportDescription" id="reportDescription"></div>
-
 <div
   #reportContainer
   id="report-container"
   *ngIf="this.reportName"
-  [style.height]="biHeight()"></div>
+  [style.height]="
+    this.biImplementationSE.autoSizeMode ? this.biImplementationSE.currentHeight + 'px' : biHeight()
+  "></div>
 
 <h1 *ngIf="!this.reportName">No reportName</h1>
 
