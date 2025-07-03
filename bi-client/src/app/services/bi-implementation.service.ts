@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import * as pbi from 'powerbi-client';
 import { ExportTablesService } from './export-tables.service';
+import { WasmLoaderService } from './wasm-loader.service';
 import { map } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { IBDGoogleAnalytics } from 'ibdevkit';
@@ -17,12 +18,17 @@ interface QueryParamsEvents {
   sectionNumber: string;
 }
 
+interface WindowWithWasm extends Window {
+  generateExcelWasm: (_csvData: string) => ArrayBuffer;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class BiImplementationService {
   http = inject(HttpClient);
   exportTablesSE = inject(ExportTablesService);
+  wasmLoaderSE = inject(WasmLoaderService);
   variablesSE = inject(VariablesService);
   activatedRoute = inject(ActivatedRoute);
   titleService = inject(Title);
@@ -133,7 +139,7 @@ export class BiImplementationService {
     });
   }
 
-  getPages(callback: any) {
+  getPages(callback: () => void) {
     this.report.getPages()?.then((pages: pbi.Page[]) => {
       const windowWidth = window.innerWidth;
 
@@ -147,8 +153,8 @@ export class BiImplementationService {
         return newHeight;
       };
 
-      pages.forEach((element: any) => {
-        if (element.isActive) {
+      pages.forEach((element: pbi.Page) => {
+        if (element.isActive && element.defaultSize?.width && element.defaultSize?.height) {
           this.currentHeight = calculateEquivalentHeight(
             element.defaultSize.width,
             element.defaultSize.height,
@@ -298,7 +304,8 @@ export class BiImplementationService {
       const dateText1 = dateCETTime.split(',');
       const dateTime = dateText1[1].split(':').join('');
 
-      await this.exportTablesSE.exportExcel(
+      // Usar el nuevo método WASM para generar Excel
+      await this.exportExcelViaWasm(
         result?.data ?? '',
         `export_data_table_results_${dateCET}_${dateTime.trim()}CET`
       );
@@ -309,5 +316,52 @@ export class BiImplementationService {
 
     this.showExportSpinner = false;
     return 1;
+  }
+
+  /**
+   * Exporta datos a Excel usando WebAssembly con Go
+   * @param csvData - Los datos en formato CSV como string
+   * @param fileName - El nombre del archivo (sin extensión)
+   */
+  async exportExcelViaWasm(csvData: string, fileName: string): Promise<void> {
+    // Verificar que tenemos datos
+    if (!csvData || csvData.trim() === '') {
+      throw new Error('No hay datos para exportar');
+    }
+
+    // Cargar WASM si no está cargado
+    if (!this.wasmLoaderSE.isWasmLoaded()) {
+      await this.wasmLoaderSE.loadWasm();
+    }
+
+    // Verificar que WASM esté disponible
+    if (!this.wasmLoaderSE.isWasmFunctionAvailable()) {
+      throw new Error(
+        'WASM module no está cargado o la función generateExcelWasm no está disponible'
+      );
+    }
+
+    // Llamar a la función Go WASM
+    const windowWithWasm = window as unknown as WindowWithWasm;
+    const bytes = windowWithWasm.generateExcelWasm(csvData);
+
+    if (!bytes) {
+      throw new Error('La función WASM no retornó datos');
+    }
+
+    // Crear y descargar el archivo
+    const blob = new Blob([bytes], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${fileName}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Limpiar el objeto URL
+    URL.revokeObjectURL(link.href);
   }
 }
