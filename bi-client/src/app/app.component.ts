@@ -1,6 +1,5 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { WasmLoaderService } from './services/wasm-loader.service';
 
 @Component({
   selector: 'app-root',
@@ -8,15 +7,6 @@ import { WasmLoaderService } from './services/wasm-loader.service';
   imports: [RouterOutlet],
   templateUrl: './app.component.html'
 })
-export class AppComponent implements OnInit {
+export class AppComponent {
   title = 'BI Embedded Application';
-
-  wasmLoaderSE = inject(WasmLoaderService);
-
-  ngOnInit() {
-    // Inicializar WASM al arrancar la aplicación
-    this.wasmLoaderSE.loadWasm().catch(() => {
-      // Error silencioso en inicialización WASM
-    });
-  }
 }
