@@ -75,5 +75,5 @@ export class ExportTablesService {
 
 interface Wscols {
   [key: string]: string;
-  // Aquí van las otras propiedades de Wscols
+  // Other Wscols properties go here
 }

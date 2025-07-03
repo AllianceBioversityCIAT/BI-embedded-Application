@@ -25,7 +25,7 @@ describe('BiComponent', () => {
           useValue: {
             snapshot: {
               paramMap: {
-                get: jest.fn().mockReturnValue('monitor') // Puedes cambiar este valor según la prueba
+                get: jest.fn().mockReturnValue('monitor') // You can change this value according to the test
               },
               queryParams: {
                 sectionNumber: '1'

@@ -19,14 +19,14 @@ func generateExcelWasm(this js.Value, args []js.Value) interface{} {
         return nil
     }
 
-    // Configurar el reader CSV
+        // Configure CSV reader
     reader := csv.NewReader(strings.NewReader(csvStr))
     reader.LazyQuotes = true
     reader.TrimLeadingSpace = true
     reader.FieldsPerRecord = -1
     reader.Comment = '#'
 
-    // Leer todos los registros
+    // Read all records
     records, err := reader.ReadAll()
     if err != nil {
         return nil
@@ -36,33 +36,33 @@ func generateExcelWasm(this js.Value, args []js.Value) interface{} {
         return nil
     }
 
-    // Crear nuevo archivo Excel
+    // Create new Excel file
     f := excelize.NewFile()
     defer f.Close()
 
     sheet := f.GetSheetName(0)
 
-    // Procesar registros
+    // Process records
     for rowIndex, row := range records {
-        if rowIndex >= 1048576 { // Límite máximo de filas en Excel
+        if rowIndex >= 1048576 { // Excel maximum row limit
             break
         }
 
         for colIndex, cell := range row {
-            if colIndex >= 16384 { // Límite máximo de columnas en Excel
+            if colIndex >= 16384 { // Excel maximum column limit
                 break
             }
 
-            // Generar nombre de celda
+            // Generate cell name
             cellName, err := excelize.CoordinatesToCellName(colIndex+1, rowIndex+1)
             if err != nil {
                 continue
             }
 
-            // Limpiar y truncar contenido
+            // Clean and truncate content
             cellValue := cleanCellValue(cell)
 
-            // Escribir valor a la celda
+            // Write value to cell
             err = f.SetCellValue(sheet, cellName, cellValue)
             if err != nil {
                 continue
@@ -70,7 +70,7 @@ func generateExcelWasm(this js.Value, args []js.Value) interface{} {
         }
     }
 
-    // Generar archivo Excel
+    // Generate Excel file
     buf := new(bytes.Buffer)
     if err := f.Write(buf); err != nil {
         return nil
@@ -78,7 +78,7 @@ func generateExcelWasm(this js.Value, args []js.Value) interface{} {
 
     b := buf.Bytes()
 
-    // Convertir a Uint8Array para JavaScript
+    // Convert to Uint8Array for JavaScript
     wasmBytes := js.Global().Get("Uint8Array").New(len(b))
     js.CopyBytesToJS(wasmBytes, b)
 
@@ -86,12 +86,12 @@ func generateExcelWasm(this js.Value, args []js.Value) interface{} {
 }
 
 func cleanCellValue(value string) string {
-    // Truncar si es demasiado largo
+    // Truncate if too long
     if len(value) > 32767 {
         return value[:32767]
     }
 
-    // Limpiar caracteres problemáticos
+    // Clean problematic characters
     cleaned := strings.ReplaceAll(value, "\r\n", "\n")
     cleaned = strings.ReplaceAll(cleaned, "\r", "\n")
 
@@ -101,6 +101,6 @@ func cleanCellValue(value string) string {
 func main() {
     js.Global().Set("generateExcelWasm", js.FuncOf(generateExcelWasm))
 
-    // Mantener el programa corriendo
+    // Keep program running
     select {}
 }

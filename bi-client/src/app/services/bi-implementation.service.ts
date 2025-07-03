@@ -304,7 +304,7 @@ export class BiImplementationService {
       const dateText1 = dateCETTime.split(',');
       const dateTime = dateText1[1].split(':').join('');
 
-      // Usar el nuevo método WASM para generar Excel
+      // Use new WASM method to generate Excel
       await this.exportExcelViaWasm(
         result?.data ?? '',
         `export_data_table_results_${dateCET}_${dateTime.trim()}CET`
@@ -319,37 +319,35 @@ export class BiImplementationService {
   }
 
   /**
-   * Exporta datos a Excel usando WebAssembly con Go
-   * @param csvData - Los datos en formato CSV como string
-   * @param fileName - El nombre del archivo (sin extensión)
+   * Export data to Excel using WebAssembly with Go
+   * @param csvData - CSV data as string
+   * @param fileName - File name (without extension)
    */
   async exportExcelViaWasm(csvData: string, fileName: string): Promise<void> {
-    // Verificar que tenemos datos
+    // Verify we have data
     if (!csvData || csvData.trim() === '') {
-      throw new Error('No hay datos para exportar');
+      throw new Error('No data to export');
     }
 
-    // Cargar WASM si no está cargado
+    // Load WASM if not loaded
     if (!this.wasmLoaderSE.isWasmLoaded()) {
       await this.wasmLoaderSE.loadWasm();
     }
 
-    // Verificar que WASM esté disponible
+    // Verify WASM is available
     if (!this.wasmLoaderSE.isWasmFunctionAvailable()) {
-      throw new Error(
-        'WASM module no está cargado o la función generateExcelWasm no está disponible'
-      );
+      throw new Error('WASM module is not loaded or generateExcelWasm function is not available');
     }
 
-    // Llamar a la función Go WASM
+    // Call Go WASM function
     const windowWithWasm = window as unknown as WindowWithWasm;
     const bytes = windowWithWasm.generateExcelWasm(csvData);
 
     if (!bytes) {
-      throw new Error('La función WASM no retornó datos');
+      throw new Error('WASM function returned no data');
     }
 
-    // Crear y descargar el archivo
+    // Create and download file
     const blob = new Blob([bytes], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     });
@@ -361,7 +359,7 @@ export class BiImplementationService {
     link.click();
     document.body.removeChild(link);
 
-    // Limpiar el objeto URL
+    // Clean up URL object
     URL.revokeObjectURL(link.href);
   }
 }

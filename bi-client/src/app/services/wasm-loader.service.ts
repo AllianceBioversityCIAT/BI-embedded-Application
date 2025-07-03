@@ -35,21 +35,21 @@ export class WasmLoaderService {
   private async initWasm(): Promise<void> {
     const windowWithGo = window as unknown as WindowWithGo;
 
-    // Cargar el script wasm_exec.js si no está disponible
+    // Load wasm_exec.js script if not available
     if (typeof windowWithGo.Go === 'undefined') {
       await this.loadScript('assets/go/wasm_exec.js');
     }
 
-    // Crear instancia de Go
+    // Create Go instance
     const go = new windowWithGo.Go();
 
-    // Cargar el módulo WASM
+    // Load WASM module
     const result = await WebAssembly.instantiateStreaming(
       fetch('assets/go/main.wasm'),
       go.importObject
     );
 
-    // Ejecutar el módulo
+    // Execute module
     go.run(result.instance);
 
     this.wasmLoaded = true;
