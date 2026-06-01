@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import * as pbi from 'powerbi-client';
 import { ExportTablesService } from './export-tables.service';
 import { WasmLoaderService } from './wasm-loader.service';
+import { SwDownloadService } from './sw-download.service';
 import { map } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { IBDGoogleAnalytics } from 'ibdevkit';
@@ -29,6 +30,7 @@ export class BiImplementationService {
   http = inject(HttpClient);
   exportTablesSE = inject(ExportTablesService);
   wasmLoaderSE = inject(WasmLoaderService);
+  swDownloadSE = inject(SwDownloadService);
   variablesSE = inject(VariablesService);
   activatedRoute = inject(ActivatedRoute);
   titleService = inject(Title);
@@ -347,19 +349,12 @@ export class BiImplementationService {
       throw new Error('WASM function returned no data');
     }
 
-    // Create and download file
-    const blob = new Blob([bytes], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    });
-
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${fileName}.xlsx`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    // Clean up URL object
-    URL.revokeObjectURL(link.href);
+    // Download via Service Worker (real https URL + Content-Disposition) instead of
+    // a blob: URL. The blob: download is blocked by the container CSP (frame-src) in
+    // Firefox when embedded in www.cgiar.org; the SW path is not. Falls back to
+    // FileSaver where Service Workers are unavailable. WASM still generates the file.
+    const EXCEL_TYPE =
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    await this.swDownloadSE.download(bytes, `${fileName}.xlsx`, EXCEL_TYPE);
   }
 }
