@@ -87,6 +87,53 @@ Reproduction harness lives in `/tmp/ff-export-repro/` (Python servers + 7 combos
 
 ---
 
+## 🚀 STEP-BY-STEP DEPLOY (run when Yeck says "deploy to test/prod")
+
+Deploy is **manual** to S3 + CloudFront. Two environments. **Before deploying, set the API URL in the matching Angular env file** (this project has no `.env`; the URL lives in `environment*.ts`).
+
+**Which env file each build uses:**
+- `npm run build` (PROD) → `src/environments/environment.ts`
+- `npm run build-dev` (TEST) → `src/environments/environment.development.ts` (via `fileReplacements` in `angular.json`)
+
+### ▶️ Deploy to TEST (bucket `prmsbitest`)
+1. **Set the TEST URL** in `src/environments/environment.development.ts`:
+   `apiBaseUrl: 'https://prtest-back.ciat.cgiar.org/'` (that line is currently commented and points to prod — switch it for a real test deploy).
+2. From `bi-client/`:
+   ```bash
+   npm run build-dev   # must succeed before touching S3
+   aws configure set aws_access_key_id <TEST_KEY>
+   aws configure set aws_secret_access_key <TEST_SECRET>
+   aws s3 rm s3://prmsbitest --recursive
+   aws s3 cp ./dist/bi-client/browser s3://prmsbitest --recursive
+   aws cloudfront create-invalidation --distribution-id EP88WI2A7Y64L --paths "/*"
+   ```
+   (or `bash scripts/ups3-test.bash`)
+
+### ▶️ Deploy to PROD (bucket `prmsbi.cgiar.org` → `bi.prms.cgiar.org`)
+1. **Set the PROD URL** in `src/environments/environment.ts`:
+   `apiBaseUrl: 'https://api.reporting.cgiar.org/'` (correct by default).
+2. From `bi-client/`:
+   ```bash
+   npm run build       # must succeed before touching S3
+   aws configure set aws_access_key_id <PROD_KEY>
+   aws configure set aws_secret_access_key <PROD_SECRET>
+   aws s3 rm s3://prmsbi.cgiar.org --recursive
+   aws s3 cp ./dist/bi-client/browser s3://prmsbi.cgiar.org --recursive
+   aws cloudfront create-invalidation --distribution-id E2ML5GGN44H8C2 --paths "/*"
+   ```
+   (or `bash scripts/ups3-prod.bash`)
+
+> ⚠️ The scripts have NO `set -e`: if `npm run build` fails, the script still runs `aws s3 rm` and **wipes the bucket**. Always confirm the build succeeded before the `rm`/`cp` step.
+
+### ✅ Post-deploy check
+```bash
+curl -I https://bi.prms.cgiar.org/sw.js                # expect 200 + content-type: text/javascript
+curl -I https://bi.prms.cgiar.org/assets/go/main.wasm  # expect 200 + application/wasm
+```
+Then open the embedded page in **Firefox** and click "Export data" to confirm the download works.
+
+---
+
 ## 🚀 HOW IT DEPLOYS (manual deploy to S3 + CloudFront)
 
 Deploy is **NOT** in GitHub Actions. `release.yml` only runs `semantic-release` (versioning + npm + GitHub release), it does not deploy.
