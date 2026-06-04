@@ -2,6 +2,8 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import * as pbi from 'powerbi-client';
 import { ExportTablesService } from './export-tables.service';
+import { WasmLoaderService } from './wasm-loader.service';
+import { SwDownloadService } from './sw-download.service';
 import { map } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { IBDGoogleAnalytics } from 'ibdevkit';
@@ -17,12 +19,18 @@ interface QueryParamsEvents {
   sectionNumber: string;
 }
 
+interface WindowWithWasm extends Window {
+  generateExcelWasm: (_csvData: string) => ArrayBuffer;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class BiImplementationService {
   http = inject(HttpClient);
   exportTablesSE = inject(ExportTablesService);
+  wasmLoaderSE = inject(WasmLoaderService);
+  swDownloadSE = inject(SwDownloadService);
   variablesSE = inject(VariablesService);
   activatedRoute = inject(ActivatedRoute);
   titleService = inject(Title);
@@ -133,7 +141,7 @@ export class BiImplementationService {
     });
   }
 
-  getPages(callback: any) {
+  getPages(callback: () => void) {
     this.report.getPages()?.then((pages: pbi.Page[]) => {
       const windowWidth = window.innerWidth;
 
@@ -147,8 +155,8 @@ export class BiImplementationService {
         return newHeight;
       };
 
-      pages.forEach((element: any) => {
-        if (element.isActive) {
+      pages.forEach((element: pbi.Page) => {
+        if (element.isActive && element.defaultSize?.width && element.defaultSize?.height) {
           this.currentHeight = calculateEquivalentHeight(
             element.defaultSize.width,
             element.defaultSize.height,
@@ -298,7 +306,8 @@ export class BiImplementationService {
       const dateText1 = dateCETTime.split(',');
       const dateTime = dateText1[1].split(':').join('');
 
-      await this.exportTablesSE.exportExcel(
+      // Use new WASM method to generate Excel
+      await this.exportExcelViaWasm(
         result?.data ?? '',
         `export_data_table_results_${dateCET}_${dateTime.trim()}CET`
       );
@@ -309,5 +318,43 @@ export class BiImplementationService {
 
     this.showExportSpinner = false;
     return 1;
+  }
+
+  /**
+   * Export data to Excel using WebAssembly with Go
+   * @param csvData - CSV data as string
+   * @param fileName - File name (without extension)
+   */
+  async exportExcelViaWasm(csvData: string, fileName: string): Promise<void> {
+    // Verify we have data
+    if (!csvData || csvData.trim() === '') {
+      throw new Error('No data to export');
+    }
+
+    // Load WASM if not loaded
+    if (!this.wasmLoaderSE.isWasmLoaded()) {
+      await this.wasmLoaderSE.loadWasm();
+    }
+
+    // Verify WASM is available
+    if (!this.wasmLoaderSE.isWasmFunctionAvailable()) {
+      throw new Error('WASM module is not loaded or generateExcelWasm function is not available');
+    }
+
+    // Call Go WASM function
+    const windowWithWasm = window as unknown as WindowWithWasm;
+    const bytes = windowWithWasm.generateExcelWasm(csvData);
+
+    if (!bytes) {
+      throw new Error('WASM function returned no data');
+    }
+
+    // Download via Service Worker (real https URL + Content-Disposition) instead of
+    // a blob: URL. The blob: download is blocked by the container CSP (frame-src) in
+    // Firefox when embedded in www.cgiar.org; the SW path is not. Falls back to
+    // FileSaver where Service Workers are unavailable. WASM still generates the file.
+    const EXCEL_TYPE =
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    await this.swDownloadSE.download(bytes, `${fileName}.xlsx`, EXCEL_TYPE);
   }
 }
