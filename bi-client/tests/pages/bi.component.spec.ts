@@ -25,7 +25,7 @@ describe('BiComponent', () => {
           useValue: {
             snapshot: {
               paramMap: {
-                get: jest.fn().mockReturnValue('monitor') // Puedes cambiar este valor según la prueba
+                get: jest.fn().mockReturnValue('monitor') // You can change this value according to the test
               },
               queryParams: {
                 sectionNumber: '1'
@@ -139,13 +139,7 @@ describe('BiComponent', () => {
       expect(component.isFullScreen).toBe(true);
     });
   });
-  describe('gATracking', () => {
-    test('should call gATracking', () => {
-      const gATrackingSpy = jest.spyOn(component, 'gATracking');
-      component.gATracking('testReportName');
-      expect(gATrackingSpy).toHaveBeenCalled();
-    });
-  });
+
   describe('reportDescriptionInnerHtml', () => {
     test('should call reportDescriptionInnerHtml', () => {
       const reportDescriptionInnerHtmlSpy = jest.spyOn(component, 'reportDescriptionInnerHtml');

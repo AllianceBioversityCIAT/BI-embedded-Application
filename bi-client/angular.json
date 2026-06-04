@@ -28,10 +28,16 @@
             "assets": [
               "src/favicon.ico",
               "src/assets",
-              "src/widget"
+              "src/widget",
+              {
+                "glob": "sw.js",
+                "input": "src",
+                "output": "/"
+              }
             ],
             "styles": [
-              "src/styles.scss"
+              "src/styles.scss",
+              "src/app/styles/colors.scss"
             ],
             "scripts": []
           },

@@ -1,0 +1,15 @@
+<div class="side-bar">
+  <div class="title">BI Embedded</div>
+  <div class="options">
+    @for (option of this.options; track $index) {
+    <div class="option">
+      <a [routerLink]="option.link" routerLinkActive="active">
+        <i class="material-icons-round">{{ option.icon }}</i>
+        {{ option.name }}
+      </a>
+    </div>
+    }
+  </div>
+</div>
+
+<div class="side-bar-space"></div>

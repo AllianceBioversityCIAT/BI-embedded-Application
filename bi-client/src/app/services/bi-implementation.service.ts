@@ -2,6 +2,8 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import * as pbi from 'powerbi-client';
 import { ExportTablesService } from './export-tables.service';
+import { WasmLoaderService } from './wasm-loader.service';
+import { SwDownloadService } from './sw-download.service';
 import { map } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { IBDGoogleAnalytics } from 'ibdevkit';
@@ -9,6 +11,17 @@ import { VariablesService } from './variables.service';
 import { ActivatedRoute } from '@angular/router';
 import { BiFilter } from '../shared/bi.interface';
 import { GetBiReport, GetBiReports, Resp } from '../shared/api.interface';
+import { Title } from '@angular/platform-browser';
+
+interface QueryParamsEvents {
+  filterPaneEnabled: string;
+  official_code: string;
+  sectionNumber: string;
+}
+
+interface WindowWithWasm extends Window {
+  generateExcelWasm: (_csvData: string) => ArrayBuffer;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -16,20 +29,30 @@ import { GetBiReport, GetBiReports, Resp } from '../shared/api.interface';
 export class BiImplementationService {
   http = inject(HttpClient);
   exportTablesSE = inject(ExportTablesService);
+  wasmLoaderSE = inject(WasmLoaderService);
+  swDownloadSE = inject(SwDownloadService);
   variablesSE = inject(VariablesService);
   activatedRoute = inject(ActivatedRoute);
+  titleService = inject(Title);
 
   apiBaseUrl = environment.apiBaseUrl + 'result-dashboard-bi';
   report: pbi.Report = {} as pbi.Report;
   showExportSpinner = false;
   currentReportName = '';
   showGlobalLoader = true;
+  currentAllSubPages: pbi.Page[] = [];
+  currentHeight: string | number = 1000;
+  autoSizeMode = false;
 
   getBiReports() {
     return this.http.get<Resp<GetBiReports>>(`${this.apiBaseUrl}/bi-reports`).pipe(
-      map(resp => {
-        return resp?.response;
-      })
+      map(resp =>
+        resp.response.map(item => ({
+          ...item,
+          filters: item.filters.filter(filter => filter != null),
+          subpages: item.subpages.filter(subpage => subpage != null)
+        }))
+      )
     );
   }
 
@@ -44,6 +67,10 @@ export class BiImplementationService {
     return this.http.post<GetBiReport>(`${this.apiBaseUrl}/bi-reports/reportName`, body);
   }
 
+  get routeParams(): QueryParamsEvents {
+    return this.activatedRoute.snapshot.queryParams as QueryParamsEvents;
+  }
+  // https://bi.prms.cgiar.org/bi/type-1-report-dashboard?official_code=INIT-01&sectionNumber=4&filterPaneEnabled=true
   renderReport(
     { token, report, filters }: GetBiReport,
     reportName: string,
@@ -60,7 +87,7 @@ export class BiImplementationService {
         id: embedReportId,
         permissions: pbi.models.Permissions.All,
         settings: {
-          filterPaneEnabled: false,
+          filterPaneEnabled: Boolean(this.routeParams.filterPaneEnabled),
           navContentPaneEnabled: false
         },
         fullscreen: {
@@ -84,13 +111,24 @@ export class BiImplementationService {
         this.applyFilters(filters);
         this.variablesSE.processes[3].works = true;
         this.showGlobalLoader = false;
+        this.report.getPages()?.then((pages: pbi.Page[]) => {
+          this.currentAllSubPages = pages;
+        });
+        this.autoSizeMode =
+          (this.activatedRoute.snapshot?.queryParams['autoSize'] ?? '') === 'true';
+
+        this.sendCurrentHeight();
+        resolve();
       });
 
       this.report.on(
         'pageChanged',
-        (event: pbi.service.ICustomEvent<{ newPage: { displayName: string } }>) => {
+        async (event: pbi.service.ICustomEvent<{ newPage: { displayName: string } }>) => {
           const page = event.detail.newPage;
+          const reportPageName = await this.getReportName();
+          this.gATracking(reportPageName);
           IBDGoogleAnalytics().trackPageView(this.convertNameToTitle(page.displayName));
+          this.sendCurrentHeight();
         }
       );
 
@@ -103,27 +141,95 @@ export class BiImplementationService {
     });
   }
 
+  getPages(callback: () => void) {
+    this.report.getPages()?.then((pages: pbi.Page[]) => {
+      const windowWidth = window.innerWidth;
+
+      const calculateEquivalentHeight = (
+        originalWidth: number,
+        originalHeight: number,
+        newWidth: number
+      ) => {
+        const aspectRatio = originalWidth / originalHeight;
+        const newHeight = newWidth / aspectRatio;
+        return newHeight;
+      };
+
+      pages.forEach((element: pbi.Page) => {
+        if (element.isActive && element.defaultSize?.width && element.defaultSize?.height) {
+          this.currentHeight = calculateEquivalentHeight(
+            element.defaultSize.width,
+            element.defaultSize.height,
+            windowWidth
+          );
+        }
+      });
+      callback();
+    });
+  }
+
+  sendCurrentHeight() {
+    if ((this.activatedRoute.snapshot?.queryParams['autoSize'] ?? '') !== 'true') return;
+    this.getPages(() => {
+      const message = {
+        type: 'pagechange',
+        currentHeight: this.currentHeight
+      };
+      window.parent.postMessage(message, '*');
+    });
+  }
+
+  gATracking(reportPageName: string) {
+    this.titleService.setTitle(this.convertNameToTitle(reportPageName));
+    IBDGoogleAnalytics().initialize(environment.googleAnalyticsId);
+  }
+
   convertVariableToList(variables: string, param_type: string) {
     const varsList = variables?.split(',');
     return param_type === 'int' ? varsList?.map((v: string) => parseInt(v)) : varsList;
   }
 
-  applyFilters(filters: BiFilter[]) {
-    filters.forEach((filter: BiFilter) => {
-      const variables = this.activatedRoute.snapshot?.queryParams[filter?.variablename];
-      const filterConfig: pbi.models.IBasicFilter = {
-        $schema: 'https://powerbi.com/product/schema#basic',
-        target: {
-          table: filter?.table,
-          column: filter?.column
-        },
-        operator: filter?.operator as pbi.models.BasicFilterOperators,
-        values: this.convertVariableToList(variables, filter?.param_type),
-        filterType: pbi.models.FilterType.Basic
-      };
-      this.report.updateFilters(pbi.models.FiltersOperations.Replace, [filterConfig]).catch(err => {
-        console.error(err);
-      });
+  async applyFilters(filters: BiFilter[]) {
+    filters.forEach(async (filter: BiFilter) => {
+      if (filter.scope === 'report') {
+        const variables = this.activatedRoute.snapshot?.queryParams[filter?.variablename];
+        const filterConfig: pbi.models.IBasicFilter = {
+          $schema: 'https://powerbi.com/product/schema#basic',
+          target: {
+            table: filter?.table,
+            column: filter?.column
+          },
+          operator: filter?.operator as pbi.models.BasicFilterOperators,
+          values: this.convertVariableToList(variables, filter?.param_type),
+          filterType: pbi.models.FilterType.Basic
+        };
+        this.report
+          .updateFilters(pbi.models.FiltersOperations.Replace, [filterConfig])
+          .catch(err => {
+            console.error(err);
+          });
+      } else {
+        try {
+          const pages = await this.report?.getPages();
+          const page = pages.filter(function (page) {
+            return page.isActive;
+          })[0];
+          const variables = this.activatedRoute.snapshot?.queryParams[filter?.variablename];
+          const filterConfig: pbi.models.IBasicFilter = {
+            $schema: 'https://powerbi.com/product/schema#basic',
+            target: {
+              table: filter?.table,
+              column: filter?.column
+            },
+            operator: filter?.operator as pbi.models.BasicFilterOperators,
+            values: this.convertVariableToList(variables, filter?.param_type),
+            filterType: pbi.models.FilterType.Basic
+          };
+          await page.updateFilters(pbi.models.FiltersOperations.Replace, [filterConfig]);
+        } catch (errors) {
+          console.error(errors);
+        }
+      }
     });
   }
 
@@ -132,10 +238,10 @@ export class BiImplementationService {
     return ttile.replace(/-/g, ' ')?.charAt(0)?.toUpperCase() + ttile?.slice(1);
   };
 
-  getReportName(): Promise<string> {
+  async getReportName(): Promise<string> {
     return new Promise<string>((resolve, reject) => {
       this.report
-        .getPages()
+        ?.getPages()
         .then((pages: pbi.Page[]) => {
           const activePage = pages.find(page => page.isActive);
 
@@ -174,7 +280,6 @@ export class BiImplementationService {
 
   async detectButtonAndTable(report: pbi.Report, bookmarkName: string | undefined) {
     if (!bookmarkName || bookmarkName.search('export_data') < 0) return 0;
-    console.log('Exporting data...\n');
     this.showExportSpinner = true;
     try {
       const pages = await report.getPages();
@@ -201,7 +306,8 @@ export class BiImplementationService {
       const dateText1 = dateCETTime.split(',');
       const dateTime = dateText1[1].split(':').join('');
 
-      await this.exportTablesSE.exportExcel(
+      // Use new WASM method to generate Excel
+      await this.exportExcelViaWasm(
         result?.data ?? '',
         `export_data_table_results_${dateCET}_${dateTime.trim()}CET`
       );
@@ -212,5 +318,43 @@ export class BiImplementationService {
 
     this.showExportSpinner = false;
     return 1;
+  }
+
+  /**
+   * Export data to Excel using WebAssembly with Go
+   * @param csvData - CSV data as string
+   * @param fileName - File name (without extension)
+   */
+  async exportExcelViaWasm(csvData: string, fileName: string): Promise<void> {
+    // Verify we have data
+    if (!csvData || csvData.trim() === '') {
+      throw new Error('No data to export');
+    }
+
+    // Load WASM if not loaded
+    if (!this.wasmLoaderSE.isWasmLoaded()) {
+      await this.wasmLoaderSE.loadWasm();
+    }
+
+    // Verify WASM is available
+    if (!this.wasmLoaderSE.isWasmFunctionAvailable()) {
+      throw new Error('WASM module is not loaded or generateExcelWasm function is not available');
+    }
+
+    // Call Go WASM function
+    const windowWithWasm = window as unknown as WindowWithWasm;
+    const bytes = windowWithWasm.generateExcelWasm(csvData);
+
+    if (!bytes) {
+      throw new Error('WASM function returned no data');
+    }
+
+    // Download via Service Worker (real https URL + Content-Disposition) instead of
+    // a blob: URL. The blob: download is blocked by the container CSP (frame-src) in
+    // Firefox when embedded in www.cgiar.org; the SW path is not. Falls back to
+    // FileSaver where Service Workers are unavailable. WASM still generates the file.
+    const EXCEL_TYPE =
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    await this.swDownloadSE.download(bytes, `${fileName}.xlsx`, EXCEL_TYPE);
   }
 }

@@ -1,11 +1,13 @@
-import { Injectable } from '@angular/core';
-import * as FileSaver from 'file-saver';
+import { inject, Injectable } from '@angular/core';
 import csv from 'csvtojson';
+import { SwDownloadService } from './sw-download.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ExportTablesService {
+  private swDownload = inject(SwDownloadService);
+
   async localCsvToJson(csvText: string) {
     return new Promise(resolve => {
       const list: Wscols[] = [];
@@ -48,10 +50,10 @@ export class ExportTablesService {
               type: 'array'
             });
 
-            console.log(excelBuffer);
-
-            this.saveAsExcelFile(excelBuffer, fileName);
-            resolve();
+            this.saveAsExcelFile(excelBuffer, fileName).then(
+              () => resolve(),
+              downloadErr => reject(downloadErr as Error)
+            );
           },
           err => {
             reject(new Error(err));
@@ -62,20 +64,16 @@ export class ExportTablesService {
   }
 
   private saveAsExcelFile(buffer: ArrayBuffer, fileName: string): Promise<void> {
-    return new Promise(resolve => {
-      const EXCEL_TYPE =
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8';
-      const EXCEL_EXTENSION = '.xlsx';
-      const data: Blob = new Blob([buffer], {
-        type: EXCEL_TYPE
-      });
-      FileSaver.saveAs(data, fileName + EXCEL_EXTENSION);
-      resolve();
-    });
+    const EXCEL_TYPE =
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8';
+    const EXCEL_EXTENSION = '.xlsx';
+    // Descarga via Service Worker (URL real) para sortear la CSP frame-src del
+    // contenedor en Firefox; con fallback a FileSaver en navegadores sin SW.
+    return this.swDownload.download(buffer, fileName + EXCEL_EXTENSION, EXCEL_TYPE);
   }
 }
 
 interface Wscols {
   [key: string]: string;
-  // Aquí van las otras propiedades de Wscols
+  // Other Wscols properties go here
 }

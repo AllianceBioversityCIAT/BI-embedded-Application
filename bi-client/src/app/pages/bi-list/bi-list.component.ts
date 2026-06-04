@@ -3,6 +3,7 @@ import { BiImplementationService } from '../../services/bi-implementation.servic
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { GetBiReports } from '../../shared/api.interface';
+import { constants } from '../../data/constants';
 
 @Component({
   selector: 'app-bi-list',
@@ -14,7 +15,7 @@ import { GetBiReports } from '../../shared/api.interface';
 export default class BiListComponent implements OnInit {
   reportsInformation: GetBiReports[] = [];
   biImplementationSE = inject(BiImplementationService);
-
+  constants = constants;
   ngOnInit(): void {
     this.getBiReportsWithCredentials();
   }

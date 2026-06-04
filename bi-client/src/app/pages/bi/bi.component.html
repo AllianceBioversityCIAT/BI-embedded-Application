@@ -30,14 +30,26 @@
 </div>
 
 <div class="reportDescription" id="reportDescription"></div>
-
 <div
   #reportContainer
   id="report-container"
   *ngIf="this.reportName"
-  [style.height]="biHeight()"></div>
+  [style.height]="
+    this.biImplementationSE.autoSizeMode ? this.biImplementationSE.currentHeight + 'px' : biHeight()
+  "></div>
 
 <h1 *ngIf="!this.reportName">No reportName</h1>
+
+@if (this.showMonitorPanel && this.biImplementationSE.currentAllSubPages.length) {
+<div class="information-panel">
+  @for (subpage of this.biImplementationSE.currentAllSubPages; track $index) {
+  <div class="subpage">
+    <strong>{{ subpage.displayName }}</strong> - {{ subpage.name }}
+  </div>
+  }
+</div>
+
+}
 
 <div class="monitor-panel" *ngIf="this.showMonitorPanel">
   <div class="help">
@@ -59,7 +71,7 @@
   </div>
 
   <div
-    class="process {{ process?.works !== null  && 'step-' + process?.step }}"
+    class="process {{ process?.works !== null && 'step-' + process?.step }}"
     [attr.works]="process?.works"
     *ngFor="let process of this.variablesSE.processes">
     <i
