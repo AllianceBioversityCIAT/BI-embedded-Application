@@ -98,10 +98,15 @@ export class SwDownloadService {
         if (event.data && event.data.ready === id) {
           navigator.serviceWorker.removeEventListener('message', onMessage);
           clearTimeout(timer);
-          // El SW ya tiene el archivo listo: disparamos la descarga real
+          // El SW ya tiene el archivo listo: disparamos la descarga real.
+          // OJO: SIN atributo `download`. Chromium CANCELA la descarga cuando un
+          // recurso servido por un SW se baja con `<a download>` ("File wasn't
+          // available on site"); sin el atributo, el `Content-Disposition:
+          // attachment; filename=...` que pone el SW fuerza la descarga con el
+          // nombre correcto, y funciona en Chromium y Firefox. Ademas es una
+          // descarga directa (no carga un frame), asi que no toca la CSP frame-src.
           const a = document.createElement('a');
           a.href = '/__dl__/' + encodeURIComponent(id);
-          a.download = filename;
           document.body.appendChild(a);
           a.click();
           a.remove();

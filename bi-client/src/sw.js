@@ -53,6 +53,12 @@ self.addEventListener('message', e => {
       });
       const cache = await caches.open(CACHE);
       await cache.put('/__dl__/' + encodeURIComponent(id), resp);
+      // Limpieza acotada: dejamos solo los ultimos N archivos. NO se borra en el
+      // `fetch` porque Chromium hace MAS DE UNA request al descargar (navegacion +
+      // descarga); borrar en el 1er fetch deja la 2da en 404 -> "File wasn't
+      // available on site". keys() viene en orden de insercion -> borramos los viejos.
+      const keys = await cache.keys();
+      for (let i = 0; i < keys.length - 5; i++) await cache.delete(keys[i]);
       if (e.source) e.source.postMessage({ ready: id });
     })()
   );
@@ -61,18 +67,17 @@ self.addEventListener('message', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (url.origin === self.location.origin && url.pathname.startsWith('/__dl__/')) {
-    // Siempre respondemos nosotros: si el archivo existe lo servimos (y lo borramos
-    // del cache), si no, devolvemos un 404 limpio en vez de dejar caer la request
-    // a la red (que serviria el index.html del SPA -> .xlsx corrupto).
+    // Siempre respondemos nosotros: si el archivo existe lo servimos, si no, un 404
+    // limpio en vez de dejar caer la request a la red (que serviria el index.html
+    // del SPA -> .xlsx corrupto).
+    // IMPORTANTE: NO borramos aqui. Chromium hace varias requests por descarga; si
+    // borraramos en el 1er fetch, la 2da daria 404. La limpieza se hace al guardar
+    // un archivo nuevo (arriba). El cache se sirve clonado para no consumir el body.
     e.respondWith(
       (async () => {
         const cache = await caches.open(CACHE);
         const match = await cache.match(e.request.url);
-        if (match) {
-          await cache.delete(e.request.url);
-          return match;
-        }
-        return new Response('Not found', { status: 404 });
+        return match || new Response('Not found', { status: 404 });
       })()
     );
   }
