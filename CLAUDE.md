@@ -1,7 +1,7 @@
 # CLAUDE.md — Working context (BI-embedded-Application)
 
 > Last session: **2026-06-09**. Branch: `staging`.
-> Status: **SW v1 (in-RAM Map) shipped to prod and FAILED in all browsers. Two REAL bugs found and fixed (Cache API + claim). Re-validated in a real browser (Firefox, embedded). NOT committed, NOT deployed yet.**
+> Status: **SW download fully fixed after FOUR real bugs (in-RAM Map, Firefox iframe control, delete-on-fetch, `<a download>` cancel in Chromium). Validated in REAL Chromium + Firefox (download completes, byte-exact valid xlsx). Committed to `staging`. A first deploy fixed only Firefox — the Chromium fixes (#3,#4) need a re-deploy.**
 
 ---
 
@@ -18,9 +18,15 @@ The browser **terminates the Service Worker** between the `postMessage` (which s
 
 **Root cause #2 (Firefox embedded — found by reproducing it PROPERLY):** even after fixing the Map, in **Firefox** the SW **does not control a cross-origin iframe on recurring loads**. It only controls it the first time (fresh install) because `clients.claim()` runs in `activate` (which runs only once). On reloads/return visits `navigator.serviceWorker.controller` stays `null` → the `fetch` to `/__dl__/` is NOT intercepted → falls through to the network → fails. Since Manuel already had the SW installed, it failed for him every time. **A Chromium-only harness does NOT catch this because Chrome DOES auto-control the iframe on reload; it's Firefox-specific.**
 
-**Fix (v2 — both bugs):**
+**Root cause #3 (Chromium — found by testing the real prod deploy):** after the first deploy, Firefox worked but **Chromium (Brave/Chrome/Edge) still failed** with `"File wasn't available on site"`. TWO Chromium-specific issues:
+- (a) The SW **deleted the cache entry on the first `fetch`**. Chromium issues **more than one request per download**; the 2nd request hit an empty cache → 404. (Verified: fetch #1 → 200, fetch #2 → 404.) Firefox issues a single request, so it didn't bite there.
+- (b) The download used **`<a download>`**. Chromium **cancels** a download whose resource is served by a SW when the anchor has the `download` attribute. (Verified across 4 variants: `anchor+download` → canceled; `anchor` without download / hidden iframe / `window.location` → all download fine in both Chromium and Firefox.)
+
+**Fix (v2 — all bugs):**
 1. **Cache API:** `sw.js` stores the file in `caches.open('dl-files')` (persists even if the worker is killed), sends the `ready` ack **after** storing, and `fetch` **always** calls `respondWith` for `/__dl__/` (serve from cache, or a clean 404 — never falls through to the network).
 2. **Claim on every load:** the client (`sw-download.service.ts` `getController`) asks the active SW `{type:'claim'}` and waits for `controllerchange`; `sw.js` responds with `self.clients.claim()`. This way the iframe stays controlled in Firefox on recurring loads too.
+3. **No delete-on-fetch:** `fetch` serves from cache without deleting; cleanup is bounded at store time (keep last 5). So Chromium's multi-request download all get 200.
+4. **No `download` attribute:** the client triggers the download with a plain `<a>` (no `download` attr); the SW's `Content-Disposition: attachment; filename=...` provides the filename. Works in Chromium + Firefox, and it's a direct download (not a frame load), so it never touches `frame-src`.
 
 **Re-validated (2026-06-09) in REAL FIREFOX, embedded in a cross-origin same-site iframe, with a `frame-src` CSP WITHOUT `blob:`, on the RELOAD path (the one that failed):**
 - Old `blob:` path → **blocked** by CSP (original bug reproduced — harness is valid).
