@@ -45,7 +45,14 @@ export class SwDownloadService {
     FileSaver.saveAs(new Blob([buffer], { type }), filename);
   }
 
-  /** Espera a que el SW controle la pagina (con timeout). null si no lo logra. */
+  /**
+   * Espera a que el SW controle la pagina (con timeout). null si no lo logra.
+   *
+   * Clave para Firefox embebido: en cargas recurrentes el iframe cross-origin NO
+   * queda controlado solo, asi que le pedimos al SW activo que haga `clients.claim()`
+   * (mensaje `{type:'claim'}`) y esperamos el `controllerchange`. Sin esto, el fetch
+   * a /__dl__/ no se intercepta y la descarga cae a la red (404 -> archivo corrupto).
+   */
   private getController(timeoutMs = 4000): Promise<ServiceWorker | null> {
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
       return Promise.resolve(null);
@@ -62,10 +69,12 @@ export class SwDownloadService {
       const onChange = () => finish(navigator.serviceWorker.controller);
       const timer = setTimeout(() => finish(navigator.serviceWorker.controller), timeoutMs);
       navigator.serviceWorker.addEventListener('controllerchange', onChange);
-      // por si ya quedo listo entre el check y el listener
+      // Pedir al SW activo que reclame el control de esta pagina (necesario en
+      // Firefox embebido en cargas recurrentes). Si ya esta listo, resolvemos.
       navigator.serviceWorker.ready
-        .then(() => {
-          if (navigator.serviceWorker.controller) finish(navigator.serviceWorker.controller);
+        .then(reg => {
+          if (navigator.serviceWorker.controller) return finish(navigator.serviceWorker.controller);
+          reg.active?.postMessage({ type: 'claim' });
         })
         .catch(() => {
           /* noop: el timeout resuelve */

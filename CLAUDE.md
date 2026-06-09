@@ -1,7 +1,32 @@
 # CLAUDE.md — Working context (BI-embedded-Application)
 
-> Last session: **2026-06-01**. Branch: `staging`.
-> Status: **FIX IMPLEMENTED & VALIDATED locally — NOT committed, NOT deployed yet.**
+> Last session: **2026-06-09**. Branch: `staging`.
+> Status: **SW v1 (in-RAM Map) shipped to prod and FAILED in all browsers. Two REAL bugs found and fixed (Cache API + claim). Re-validated in a real browser (Firefox, embedded). NOT committed, NOT deployed yet.**
+
+---
+
+## 🛑 POSTMORTEM — why the v1 fix broke the download EVERYWHERE (2026-06-09)
+
+**Symptom reported by Manuel Almanzar:** it no longer exports in any browser.
+- Chrome/Edge: `"File wasn't available on site"` (404).
+- Firefox: downloads a file Excel can't open (`"file format or file extension is not valid"`).
+
+**Root cause #1 (confirmed):** `sw.js` stored the file in an **in-memory `Map` (`FILES`)**.
+The browser **terminates the Service Worker** between the `postMessage` (which stores the buffer) and the download click's `fetch`. When the worker restarts, the `Map` starts empty → `FILES.get(id)` is `undefined` → the handler **does not call `respondWith`** → the request falls through to the network → CloudFront returns **404** (verified: `/__dl__/<anything>` → 404, NO SPA fallback). Hence "not available" in Chrome and the corrupt file in Firefox.
+
+> ⚠️ The v1 Playwright harness did NOT catch it because there the worker stayed warm. In prod it gets killed. **Lesson: a SW must NOT rely on in-RAM state surviving between events.**
+
+**Root cause #2 (Firefox embedded — found by reproducing it PROPERLY):** even after fixing the Map, in **Firefox** the SW **does not control a cross-origin iframe on recurring loads**. It only controls it the first time (fresh install) because `clients.claim()` runs in `activate` (which runs only once). On reloads/return visits `navigator.serviceWorker.controller` stays `null` → the `fetch` to `/__dl__/` is NOT intercepted → falls through to the network → fails. Since Manuel already had the SW installed, it failed for him every time. **A Chromium-only harness does NOT catch this because Chrome DOES auto-control the iframe on reload; it's Firefox-specific.**
+
+**Fix (v2 — both bugs):**
+1. **Cache API:** `sw.js` stores the file in `caches.open('dl-files')` (persists even if the worker is killed), sends the `ready` ack **after** storing, and `fetch` **always** calls `respondWith` for `/__dl__/` (serve from cache, or a clean 404 — never falls through to the network).
+2. **Claim on every load:** the client (`sw-download.service.ts` `getController`) asks the active SW `{type:'claim'}` and waits for `controllerchange`; `sw.js` responds with `self.clients.claim()`. This way the iframe stays controlled in Firefox on recurring loads too.
+
+**Re-validated (2026-06-09) in REAL FIREFOX, embedded in a cross-origin same-site iframe, with a `frame-src` CSP WITHOUT `blob:`, on the RELOAD path (the one that failed):**
+- Old `blob:` path → **blocked** by CSP (original bug reproduced — harness is valid).
+- SW v2 fix → **downloads ✅**, `controller: YES` after claim, file **byte-exact** vs reference (16122 bytes), starts with `PK` (valid xlsx).
+- `npm run build` OK; `sw.js` with `claim` + Cache API confirmed in `dist/bi-client/browser/sw.js`.
+- Harness: `/tmp/sw-dl-test/` (real `sw.js` + `run-ff.js` Playwright-Firefox + `front.html` + `reference.xlsx`).
 
 ---
 
